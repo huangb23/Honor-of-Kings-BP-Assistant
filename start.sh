@@ -8,15 +8,13 @@ cd "$(dirname "$0")"
 
 PORT="${1:-8000}"
 
-# 优先用 win_rate 的 venv 里的 python，找不到则回退系统 python
-if [ -x "win_rate/.venv/bin/python" ]; then
-    PY="win_rate/.venv/bin/python"
-elif command -v python3 >/dev/null 2>&1; then
+# 默认使用系统 python（不依赖 venv）
+if command -v python3 >/dev/null 2>&1; then
     PY="python3"
 elif command -v python >/dev/null 2>&1; then
     PY="python"
 else
-    echo "❌ 找不到 Python，请安装 Python 3 或确认 venv 存在 (win_rate/.venv)"
+    echo "❌ 找不到 Python 3，请先安装 Python 3 并执行: pip install -r requirements.txt"
     exit 1
 fi
 

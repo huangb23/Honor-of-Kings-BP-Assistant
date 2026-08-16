@@ -2,7 +2,7 @@
 """
 生成英雄拼音映射，保存到 data/hero_pinyin.json。
 用 pypinyin（需要 pip install pypinyin）。
-用法：../win_rate/.venv/bin/python -u gen_pinyin.py
+用法：python3 -u gen_pinyin.py
 """
 import os
 import json

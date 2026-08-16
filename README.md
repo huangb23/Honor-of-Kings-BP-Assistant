@@ -24,13 +24,30 @@ wzry/
 │   └── index.html
 ├── start.sh            # Mac / Linux 启动脚本
 ├── start.bat           # Windows 启动脚本
+├── requirements.txt    # Python 依赖
 ├── README.md
 └── .gitignore
+```
+
+### requirements.txt
+
+后端运行只需 3 个第三方依赖（其余用 Python 标准库）：
+
+```python
+requests>=2.28   # 爬取英雄胜率与组合优势
+numpy>=1.24      # 胜率模型数值计算
+pypinyin>=0.50   # 生成英雄拼音映射（前端拼音检索）
 ```
 
 ---
 
 ## 快速启动
+
+### 首次准备：安装依赖（系统 Python）
+
+```bash
+pip install -r requirements.txt
+```
 
 ### Mac / Linux
 
@@ -48,7 +65,7 @@ wzry/
 
 启动后浏览器打开：**http://localhost:8000/index.html**
 
-> 脚本自动使用 `win_rate/.venv` 里的 Python（需在 develop 分支提供该 venv），找不到则回退系统 `python3`/`python`。
+> 启动脚本默认使用**系统 `python3`/`python`**，不依赖任何 venv。
 
 ---
 

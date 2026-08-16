@@ -14,7 +14,7 @@
       "heroes": { "廉颇": {"winRate": 44.95, "days": 5}, ... }
     }
 
-用法：.venv/bin/python -u winrate_crawler.py
+用法：python3 -u winrate_crawler.py
 """
 import os
 import json

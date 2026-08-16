@@ -7,7 +7,7 @@ BP 预测 API 服务（零依赖，用标准库 http.server）。
   POST /predict          body: {"my": [...], "opp": [...], "ban": [...], "role": null}
                          返回: {base_win_rate, single_pick:{role:[...]}, double_pick:[...]}
 
-用法：../win_rate/.venv/bin/python -u server.py  [端口，默认 8000]
+用法：python3 -u server.py  [端口，默认 8000]
 前端页面由 http.server 一并托管（static 目录）。
 """
 import os

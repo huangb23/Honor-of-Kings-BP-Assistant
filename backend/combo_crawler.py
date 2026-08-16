@@ -16,7 +16,7 @@
       }
     }
 
-用法：.venv/bin/python -u combo_crawler.py
+用法：python3 -u combo_crawler.py
 """
 import os
 import json

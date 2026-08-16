@@ -8,22 +8,18 @@ cd /d "%~dp0"
 set "PORT=%1"
 if "%PORT%"=="" set "PORT=8000"
 
-REM 优先用 win_rate 的 venv 里的 python，找不到则回退系统 python
-if exist "win_rate\.venv\Scripts\python.exe" (
-    set "PY=win_rate\.venv\Scripts\python.exe"
+REM 默认使用系统 python（不依赖 venv）
+where python >nul 2>nul
+if %errorlevel%==0 (
+    set "PY=python"
 ) else (
-    where python >nul 2>nul
+    where py >nul 2>nul
     if %errorlevel%==0 (
-        set "PY=python"
+        set "PY=py"
     ) else (
-        where py >nul 2>nul
-        if %errorlevel%==0 (
-            set "PY=py"
-        ) else (
-            echo [ERROR] 找不到 Python，请安装 Python 3 或确认 venv 存在 win_rate\.venv
-            pause
-            exit /b 1
-        )
+        echo [ERROR] 找不到 Python 3，请先安装 Python 3 并执行: pip install -r requirements.txt
+        pause
+        exit /b 1
     )
 )
 

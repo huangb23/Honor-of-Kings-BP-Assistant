@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>王者荣耀 BP 选人助手</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+         background: #14161a; color: #e6e6e6; min-height: 100vh; padding: 24px; }
+  h1 { text-align: center; margin-bottom: 20px; font-size: 22px; letter-spacing: 2px; }
+  .container { max-width: 1120px; margin: 0 auto; }
+
+  .ban-box { background: #1d2026; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; }
+  .ban-box .title { font-size: 15px; margin-bottom: 10px; color: #ff6b6b; }
+  .ban-row { display: flex; gap: 6px; align-items: center; }
+  .ban-row input { flex: 1; }
+  .ban-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .ban-tag { background: #3a2020; border: 1px solid #6b3b3b; border-radius: 6px;
+             padding: 4px 10px; font-size: 14px; }
+  .ban-tag .x { cursor: pointer; margin-left: 4px; color: #ff8888; }
+  .ban-tag .x:hover { color: #fff; }
+
+  .teams { display: flex; gap: 16px; }
+  .team { flex: 1; background: #1b1e24; border-radius: 10px; padding: 14px; }
+  .team.my { border: 1px solid #2d6ad6; }
+  .team.opp { border: 1px solid #d6502d; }
+  .team h3 { font-size: 15px; margin-bottom: 10px; }
+  .team.my h3 { color: #6ea8ff; }
+  .team.opp h3 { color: #ff8a66; }
+
+  .slot { margin-bottom: 12px; background: #23262d; border-radius: 8px; padding: 8px 10px; }
+  .slot .label { font-size: 12px; color: #8a8a8a; margin-bottom: 6px; }
+  .slot .row { display: flex; gap: 6px; }
+  select, input { background: #2c303a; border: 1px solid #3a3f4b; color: #eee;
+                 border-radius: 6px; padding: 6px 8px; font-size: 14px; }
+  select:focus, input:focus { outline: none; border-color: #5b6ea8; }
+  .slot input { flex: 1; }
+  .slot .role { min-width: 80px; }
+
+  /* 搜索建议下拉 */
+  .cb { position: relative; flex: 1; }
+  .cb input { width: 100%; }
+  .cb-list { position: absolute; z-index: 10; top: 100%; left: 0; right: 0; max-height: 240px;
+             overflow-y: auto; background: #2c303a; border: 1px solid #3a3f4b; border-radius: 6px;
+             margin-top: 2px; display: none; }
+  .cb-list div { padding: 6px 10px; cursor: pointer; font-size: 14px; }
+  .cb-list div:hover, .cb-list div.active { background: #3b4250; }
+  .cb-list .hint { color: #888; font-size: 12px; padding: 6px 10px; }
+
+  .result { margin-top: 20px; background: #1b1e24; border-radius: 10px; padding: 16px 18px; }
+  .win { font-size: 18px; margin-bottom: 12px; }
+  .win b { color: #ffd75e; font-size: 26px; }
+  .rec-title { font-size: 15px; color: #9ecbff; margin: 12px 0 8px; }
+  .rec-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .rec-table th, .rec-table td { border: 1px solid #333842; padding: 6px 10px; text-align: left; }
+  .rec-table th { background: #262a33; }
+  .rec-table td.top1 { color: #ffd700; font-weight: bold; }
+  .dbl { display: flex; gap: 10px; flex-wrap: wrap; }
+  .dbl .item { background: #23262d; border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+  .dbl .item b { color: #9ecbff; }
+
+  .btn-predict { display: block; margin: 16px auto 0; background: #2d6ad6; color: #fff;
+                 border: none; border-radius: 8px; padding: 12px 40px; font-size: 16px;
+                 cursor: pointer; }
+  .btn-predict:hover { background: #3b7de8; }
+  .status { text-align: center; color: #aaa; margin-top: 8px; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>🎮 王者荣耀 BP 选人助手</h1>
+<div class="container">
+
+  <div class="ban-box">
+    <div class="title">🚫 禁用英雄（可添加多个）</div>
+    <div class="ban-row">
+      <select class="role" id="banRole">
+        <option value="">全部</option>
+        <option>对抗路</option><option>中路</option><option>发育路</option><option>打野</option><option>游走</option>
+      </select>
+      <div id="banCombobox"></div>
+      <button class="add-btn" id="addBanBtn">添加禁用</button>
+    </div>
+    <div class="ban-list" id="banList"></div>
+  </div>
+
+  <div class="teams">
+    <div class="team my">
+      <h3>🔵 我方阵容</h3>
+      <div id="mySlots"></div>
+    </div>
+    <div class="team opp">
+      <h3>🔴 敌方阵容</h3>
+      <div id="oppSlots"></div>
+    </div>
+  </div>
+
+  <button class="btn-predict" id="predictBtn">预测胜率与选人推荐</button>
+  <div class="status" id="status"></div>
+
+  <div class="result" id="result" style="display:none;">
+    <div class="win">当前阵容我方胜率：<b id="baseWin">--</b></div>
+    <div class="rec-title">📋 单英雄推荐（加入后胜率 Top5，按位置）</div>
+    <table class="rec-table" id="singleTable"></table>
+    <div class="rec-title">🎯 双英雄组合推荐（前20）</div>
+    <div class="dbl" id="doubleBox"></div>
+  </div>
+
+</div>
+
+<script>
+const ROLES = ['对抗路', '中路', '发育路', '打野', '游走'];
+const collator = new Intl.Collator('zh');
+const $ = id => document.getElementById(id);
+
+let HEROES = [];            // [{name, roles, pinyin, initial}]
+let byName = {};            // name -> hero
+const MY = Array.from({length:5}, (_, i) => ({role: ROLES[i], hero: ''}));
+const OPP = Array.from({length:5}, (_, i) => ({role: ROLES[i], hero: ''}));
+const BANS = [];
+
+function status(t){ $('status').textContent = t; }
+
+function takenSet() {
+  const s = new Set(BANS);
+  MY.forEach(x => x.hero && s.add(x.hero));
+  OPP.forEach(x => x.hero && s.add(x.hero));
+  return s;
+}
+
+// 拼音匹配：支持 全拼/首字母/拼音子串/汉字子串
+function matchHero(h, kw) {
+  if (!kw) return true;
+  const k = kw.toLowerCase().replace(/[()（）]/g, '');
+  if (h.name.includes(kw)) return true;
+  const full = h.pinyin.replace(/[()（）]/g, '').toLowerCase();
+  const ini = h.initial.replace(/[()（）]/g, '').toLowerCase();
+  return full.includes(k) || ini.includes(k);
+}
+
+function pool(role, kw) {
+  const ex = takenSet();
+  return HEROES.filter(h => (!role || h.roles.includes(role)) && !ex.has(h.name) && matchHero(h, kw || ''));
+}
+
+// ---- 自定义搜索下拉 ----
+function openList(box) { box.querySelector('.cb-list').style.display = 'block'; }
+function closeList(box) { box.querySelector('.cb-list').style.display = 'none'; }
+
+function renderList(box, role, kw, onPick) {
+  const list = box.querySelector('.cb-list');
+  const items = pool(role, kw).slice(0, 12);
+  if (!items.length) {
+    list.innerHTML = '<div class="hint">无匹配英雄</div>';
+  } else {
+    list.innerHTML = items.map((h, i) =>
+      `<div data-i="${i}" class="${i===0?'active':''}">${h.name}</div>`).join('');
+    list.querySelectorAll('div[data-i]').forEach(d => {
+      d.addEventListener('click', () => {
+        onPick(items[+d.dataset.i].name);
+        closeList(box);
+        box.querySelector('input').blur();
+      });
+    });
+  }
+  list._items = items;
+  openList(box);
+}
+
+// 组装一个搜索槽；getRole() 动态取当前分路
+// keepFocus=true 时回车后焦点保留、下拉保持，便于连续输入（用于 ban）
+// onClear：输入被删空（退格/删除）时回调，用于清空已选英雄
+function makeCombobox(getRole, current, onPick, keepFocus, onClear) {
+  const box = document.createElement('div');
+  box.className = 'cb';
+  box.innerHTML = `
+    <input placeholder="输入英雄/拼音" value="${current}">
+    <div class="cb-list"></div>`;
+  const input = box.querySelector('input');
+  const list = box.querySelector('.cb-list');
+
+  input.addEventListener('focus', () => renderList(box, getRole(), input.value, onPick));
+  input.addEventListener('input', () => {
+    if (input.value === '' && onClear) onClear();
+    renderList(box, getRole(), input.value, onPick);
+  });
+  input.addEventListener('keydown', e => {
+    const items = list._items || [];
+    const act = list.querySelector('.active');
+    let idx = items.findIndex((h, i) => list.children[i] === act);
+    if (e.key === 'Enter') {
+      const pick = act ? items[idx] : (items.length ? items[0] : null);
+      if (pick) onPick(pick.name);
+      if (keepFocus) {
+        input.value = '';
+        renderList(box, getRole(), '', onPick); // 保持焦点与下拉，可继续输入
+      } else {
+        closeList(box); input.blur();
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault(); move(1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault(); move(-1);
+    }
+    function move(d){
+      const cs=list.children; if(!cs.length) return;
+      let i=idx; let ni=(i+d+cs.length)%cs.length;
+      [...cs].forEach(c=>c.classList.remove('active')); cs[ni].classList.add('active');
+    }
+  });
+  document.addEventListener('click', e => { if (!box.contains(e.target)) closeList(box); });
+  return box;
+}
+
+// ---- 渲染 ----
+function renderSlots(side) {
+  const arr = side==='my'?MY:OPP;
+  const el = $(side + 'Slots');
+  el.innerHTML = '';
+  arr.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'slot';
+    div.innerHTML = `<div class="label">${side==='my'?'我方':'敌方'} 位置 ${i+1}</div>`;
+    const row = document.createElement('div');
+    row.className = 'row';
+    const sel = document.createElement('select');
+    sel.className = 'role';
+    sel.innerHTML = ROLES.map(r => `<option value="${r}" ${s.role===r?'selected':''}>${r}</option>`).join('');
+    const cb = makeCombobox(() => arr[i].role, s.hero,
+      (h) => { arr[i].hero = h; cb.querySelector('input').value = h; },
+      false, () => { arr[i].hero = ''; });
+    sel.addEventListener('change', () => { arr[i].role = sel.value; });
+    row.appendChild(sel);
+    row.appendChild(cb);
+    div.appendChild(row);
+    el.appendChild(div);
+  });
+}
+
+function renderBans() {
+  $('banList').innerHTML = BANS.map((b, i) =>
+    `<span class="ban-tag">${b}<span class="x" onclick="removeBan(${i})">✕</span></span>`).join('');
+}
+function removeBan(i){ BANS.splice(i,1); renderBans(); }
+function addBan(name){
+  if (!name) return;
+  if (BANS.includes(name)){ alert('已在禁用'); return; }
+  BANS.push(name); renderBans();
+}
+// ban 搜索下拉（可多选：每次选中/回车添加一个，回车后焦点停留便于连续输入）
+function initBanCombobox(){
+  const holder = $('banCombobox');
+  const box = makeCombobox(() => $('banRole').value, '', (h) => {
+    addBan(h);
+  }, true /* keepFocus */);
+  holder.appendChild(box);
+  $('addBanBtn').addEventListener('click', ()=>{
+    const inp = box.querySelector('input');
+    const v = inp.value.trim();
+    inp.value='';
+    inp.focus();
+    if (!v) return;
+    const h = HEROES.find(h => h.name === v || matchHero(h, v));
+    if (!h){ alert('未找到英雄：'+v); return; }
+    addBan(h.name);
+  });
+}
+
+// ---- 预测 ----
+$('predictBtn').addEventListener('click', doPredict);
+async function doPredict(){
+  status('⏳ 计算中...');
+  const body = {
+    my: MY.map(o=>o.hero).filter(Boolean),
+    my_slots: MY.map(o=>({role:o.role, hero:o.hero})),
+    opp: OPP.map(o=>o.hero).filter(Boolean),
+    ban: BANS, top_k: 5,
+  };
+  try {
+    const res = await fetch('/api/predict', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    const d = await res.json();
+    if(!res.ok) throw new Error(d.error||'预测失败');
+    showResult(d); status('✅ 完成');
+  } catch(e){ status('❌ '+e.message); }
+}
+function showResult(d){
+  $('result').style.display='block';
+  $('baseWin').textContent=(d.base_win_rate*100).toFixed(1)+'%';
+  let html='<tr><th>位置</th>'+Array.from({length:5},(_,i)=>`<th>Top${i+1}</th>`).join('')+'</tr>';
+  for(const [role, items] of Object.entries(d.single_pick)){
+    html+='<tr><td>'+role+'</td>'+items.map((it,i)=>`<td ${i===0?'class="top1"':''}>${it[0]} (${(it[1]*100).toFixed(1)}%)</td>`).join('')+'</tr>';
+  }
+  $('singleTable').innerHTML=html;
+  $('doubleBox').innerHTML=d.double_pick.map(([p,wr],i)=>`<div class="item">组合${i+1}: <b>${p[0]} + ${p[1]}</b> 胜率 ${(wr*100).toFixed(1)}%</div>`).join('');
+}
+
+async function init(){
+  try{
+    const res = await fetch('/api/heroes');
+    const data = await res.json();
+    HEROES = data.heroes;
+    HEROES.sort((a,b)=>collator.compare(a.name,b.name));
+    HEROES.forEach(h => byName[h.name] = h);
+    initBanCombobox();
+    renderSlots('my');
+    renderSlots('opp');
+    renderBans();
+    status('✅ 就绪，位置已默认分路，支持拼音检索');
+  }catch(e){ status('❌ 加载失败：'+e.message); }
+}
+init();
+</script>
+</body>
+</html>

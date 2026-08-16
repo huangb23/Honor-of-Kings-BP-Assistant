@@ -1,0 +1,29 @@
+# ============ 系统 / 编辑器 ============
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# ============ Python ============
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# 虚拟环境（后端运行依赖 win_rate/.venv，但 venv 不入库）
+.venv/
+venv/
+env/
+
+# ============ 数据 / 爬取产物 ============
+# 后端爬取的英雄胜率、组合优势、名册等运行时数据
+backend/data/
+# 数据源与实验目录：主分支不包含，统一放 develop 分支
+training/
+win_rate/
+
+# ============ 日志 / 临时 ============
+*.log
+tmp/
+/tmp/

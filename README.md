@@ -1,93 +1,99 @@
-# wzry
+# 王者荣耀 BP 选人助手
 
+基于英雄胜率 + 协同/克制指数，做 BP（Ban/Pick）阶段的胜率预测与选人推荐。
 
+主分支 `main` 只保留**前后端**（`backend/` + `frontend/`）。训练与数据相关代码放在 `develop` 分支（`training/`、`win_rate/`），不污染主分支。
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## 目录结构（main 分支）
 
 ```
-cd existing_repo
-git remote add origin https://git.tsinghua.edu.cn/huangb23/wzry.git
-git branch -M main
-git push -uf origin main
+wzry/
+├── backend/            # Python 后端：数据爬取 + 胜率模型 + 预测 API
+│   ├── main.py         # 命令行入口
+│   ├── server.py       # BP 预测 HTTP 服务（零依赖，标准库 http.server）
+│   ├── winrate_crawler.py   # 英雄胜率爬虫（巅峰千强近 5 日）
+│   ├── combo_crawler.py     # 组合优势爬虫（协同/克制指数，≥5 天过期重爬）
+│   ├── gen_pinyin.py        # 生成英雄拼音映射（前端拼音检索用）
+│   ├── model.py        # 三特征胜率模型
+│   ├── engine.py       # BP 推荐引擎
+│   ├── config.py       # 全局配置
+│   └── README.md       # 后端详细说明
+├── frontend/           # 前端页面（纯 HTML+JS 单文件，由后端托管）
+│   └── index.html
+├── start.sh            # Mac / Linux 启动脚本
+├── start.bat           # Windows 启动脚本
+├── README.md
+└── .gitignore
 ```
 
-## Integrate with your tools
+---
 
-* [Set up project integrations](https://git.tsinghua.edu.cn/huangb23/wzry/-/settings/integrations)
+## 快速启动
 
-## Collaborate with your team
+### Mac / Linux
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+```bash
+./start.sh            # 默认端口 8000
+./start.sh 9000       # 指定端口
+```
 
-## Test and Deploy
+### Windows
 
-Use the built-in continuous integration in GitLab.
+```
+双击 start.bat
+（或命令行：start.bat 9000）
+```
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+启动后浏览器打开：**http://localhost:8000/index.html**
 
-***
+> 脚本自动使用 `win_rate/.venv` 里的 Python（需在 develop 分支提供该 venv），找不到则回退系统 `python3`/`python`。
 
-# Editing this README
+---
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## 前端功能
 
-## Suggestions for a good README
+- 我方 / 敌方各 5 个位置，默认分路为 对抗路 / 中路 / 发育路 / 打野 / 游走
+- 每个位置支持**拼音检索**（全拼 / 首字母 / 拼音子串）+ 回车确认 + 退格清除
+- 禁用（Ban）区支持**下拉多选**，回车后焦点停留可连续输入多个 ban
+- 已选 / 已 ban 的英雄自动从下拉候选排除
+- 点击"预测"展示：当前阵容胜率、各分路单英雄 Top5、双人组合 Top20
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+---
 
-## Name
-Choose a self-explaining name for your project.
+## 胜率模型（详见 backend/README.md 与 develop 分支的 training/SUMMARY.md）
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+```
+csv_diff = mean(我方英雄csv胜率) − mean(敌方英雄csv胜率)      # 胜率不 ÷100
+syn_diff = mean(我方队内协同)   − mean(敌方队内协同)
+cnt_diff = mean(我方克制敌方)   − mean(敌方克制我方)
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+score = −0.2410·csv_diff + 0.2229·syn_diff + 0.3324·cnt_diff
+win_rate = 1 / (1 + e^{−score})
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+- 无独热、无截距、无需归一化
+- 特征来自站点 `tianyuanzhiyi.com`：巅峰千强近 5 日胜率、英雄协同 / 克制指数
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+---
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## 数据更新
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+| 数据 | 来源 | 更新策略 |
+|------|------|---------|
+| 英雄胜率 | `herostats?date=昨日&gameMode=6`（巅峰千强近 5 日）| 每天自动刷新（非今日则重拉）|
+| 组合优势 | `hero/analysis?heroId=`（协同 / 克制）| 距上次 ≥ 5 天则重爬 |
+| 英雄名册 | 站点 herostats 全量 | 组合过期重爬时自动更新，含新英雄 |
+| 英雄拼音 | 本地 pypinyin 生成 | 手动执行 `gen_pinyin.py` 重新生成 |
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+爬取产物（`backend/data/`）已在 `.gitignore` 中忽略，不入库。
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+---
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## 分支约定
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+- **`main`**：前后端（`backend/`、`frontend/`、启动脚本、文档）
+- **`develop`**：训练与数据采集（`training/`、`win_rate/`）
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+`.gitignore` 已忽略 `training/`、`win_rate/`、`backend/data/`，确保主分支干净。

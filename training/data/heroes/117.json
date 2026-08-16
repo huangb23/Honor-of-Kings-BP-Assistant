@@ -1,0 +1,318 @@
+{
+  "heroId": 117,
+  "counters": [
+    {
+      "heroName": "桑启",
+      "totalMatches": 98,
+      "advantageIndex": 9.37,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "空空儿",
+      "totalMatches": 97,
+      "advantageIndex": 8.82,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "姬小满",
+      "totalMatches": 147,
+      "advantageIndex": 7.87,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "上官婉儿",
+      "totalMatches": 177,
+      "advantageIndex": 6.14,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "赵怀真",
+      "totalMatches": 228,
+      "advantageIndex": 5.79,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "孙悟空",
+      "totalMatches": 304,
+      "advantageIndex": 5.78,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "后羿",
+      "totalMatches": 233,
+      "advantageIndex": 5.25,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "老夫子",
+      "totalMatches": 393,
+      "advantageIndex": 4.84,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "铠",
+      "totalMatches": 356,
+      "advantageIndex": 4.27,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "西施",
+      "totalMatches": 274,
+      "advantageIndex": 4.03,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "海月",
+      "totalMatches": 251,
+      "advantageIndex": 3.84,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "夏洛特",
+      "totalMatches": 259,
+      "advantageIndex": 3.67,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "敖隐",
+      "totalMatches": 309,
+      "advantageIndex": 3.44,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "元流之子(辅助)",
+      "totalMatches": 408,
+      "advantageIndex": 2.9,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "元流之子(射手)",
+      "totalMatches": 1179,
+      "advantageIndex": 2.79,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "哪吒",
+      "totalMatches": 666,
+      "advantageIndex": 2.61,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "沈梦溪",
+      "totalMatches": 737,
+      "advantageIndex": 2.48,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "张飞",
+      "totalMatches": 714,
+      "advantageIndex": 2.02,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "少司缘",
+      "totalMatches": 719,
+      "advantageIndex": 1.93,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "蚩奼",
+      "totalMatches": 894,
+      "advantageIndex": 1.79,
+      "thresholdSource": "counterThreshold"
+    }
+  ],
+  "counteredBy": [
+    {
+      "heroName": "李元芳",
+      "totalMatches": 93,
+      "advantageIndex": -11.19,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "典韦",
+      "totalMatches": 156,
+      "advantageIndex": -8.75,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "太乙真人",
+      "totalMatches": 344,
+      "advantageIndex": -4.73,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "曹操",
+      "totalMatches": 501,
+      "advantageIndex": -3.63,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "大禹",
+      "totalMatches": 524,
+      "advantageIndex": -2.96,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "公孙离",
+      "totalMatches": 488,
+      "advantageIndex": -2.88,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "小乔",
+      "totalMatches": 485,
+      "advantageIndex": -2.71,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "关羽",
+      "totalMatches": 422,
+      "advantageIndex": -2.62,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "狂铁",
+      "totalMatches": 470,
+      "advantageIndex": -2.39,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "马超",
+      "totalMatches": 610,
+      "advantageIndex": -2.32,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "女娲",
+      "totalMatches": 613,
+      "advantageIndex": -2.17,
+      "thresholdSource": "counterThreshold"
+    }
+  ],
+  "goodSynergies": [
+    {
+      "heroName": "貂蝉",
+      "totalMatches": 229,
+      "synergyIndex": 9.9
+    },
+    {
+      "heroName": "马超",
+      "totalMatches": 316,
+      "synergyIndex": 5.87
+    },
+    {
+      "heroName": "西施",
+      "totalMatches": 245,
+      "synergyIndex": 5.76
+    },
+    {
+      "heroName": "苍",
+      "totalMatches": 220,
+      "synergyIndex": 5.75
+    },
+    {
+      "heroName": "云缨",
+      "totalMatches": 225,
+      "synergyIndex": 5.75
+    },
+    {
+      "heroName": "敖隐",
+      "totalMatches": 323,
+      "synergyIndex": 5.34
+    },
+    {
+      "heroName": "镜",
+      "totalMatches": 361,
+      "synergyIndex": 5.23
+    },
+    {
+      "heroName": "苏烈",
+      "totalMatches": 553,
+      "synergyIndex": 4.97
+    },
+    {
+      "heroName": "暃",
+      "totalMatches": 344,
+      "synergyIndex": 4.43
+    },
+    {
+      "heroName": "元流之子(辅助)",
+      "totalMatches": 343,
+      "synergyIndex": 4.1
+    },
+    {
+      "heroName": "大乔",
+      "totalMatches": 476,
+      "synergyIndex": 3.99
+    },
+    {
+      "heroName": "海月",
+      "totalMatches": 314,
+      "synergyIndex": 3.99
+    },
+    {
+      "heroName": "韩信",
+      "totalMatches": 327,
+      "synergyIndex": 3.74
+    },
+    {
+      "heroName": "蚩奼",
+      "totalMatches": 697,
+      "synergyIndex": 2.18
+    },
+    {
+      "heroName": "戈娅",
+      "totalMatches": 807,
+      "synergyIndex": 2.04
+    },
+    {
+      "heroName": "少司缘",
+      "totalMatches": 823,
+      "synergyIndex": 1.27
+    }
+  ],
+  "badSynergies": [
+    {
+      "heroName": "后羿",
+      "totalMatches": 178,
+      "synergyIndex": -6.72
+    },
+    {
+      "heroName": "铠",
+      "totalMatches": 273,
+      "synergyIndex": -5.11
+    },
+    {
+      "heroName": "宫本武藏",
+      "totalMatches": 235,
+      "synergyIndex": -4.57
+    },
+    {
+      "heroName": "李信",
+      "totalMatches": 291,
+      "synergyIndex": -4.03
+    },
+    {
+      "heroName": "刘邦",
+      "totalMatches": 690,
+      "synergyIndex": -3.57
+    },
+    {
+      "heroName": "诸葛亮",
+      "totalMatches": 472,
+      "synergyIndex": -2.35
+    },
+    {
+      "heroName": "元流之子(射手)",
+      "totalMatches": 1218,
+      "synergyIndex": -2.02
+    },
+    {
+      "heroName": "女娲",
+      "totalMatches": 604,
+      "synergyIndex": -1.83
+    }
+  ],
+  "serverCached": "引用麻烦注明出处233"
+}

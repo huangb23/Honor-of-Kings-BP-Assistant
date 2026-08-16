@@ -1,0 +1,27 @@
+{
+  "heroId": 501,
+  "counters": [],
+  "counteredBy": [
+    {
+      "heroName": "元流之子(射手)",
+      "totalMatches": 131,
+      "advantageIndex": -9.95,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "少司缘",
+      "totalMatches": 119,
+      "advantageIndex": -9.12,
+      "thresholdSource": "counterThreshold"
+    }
+  ],
+  "goodSynergies": [
+    {
+      "heroName": "元流之子(射手)",
+      "totalMatches": 234,
+      "synergyIndex": 3.68
+    }
+  ],
+  "badSynergies": [],
+  "serverCached": "引用麻烦注明出处233"
+}

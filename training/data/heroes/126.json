@@ -1,0 +1,190 @@
+{
+  "heroId": 126,
+  "counters": [
+    {
+      "heroName": "上官婉儿",
+      "totalMatches": 93,
+      "advantageIndex": 12.41,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "杨戬",
+      "totalMatches": 109,
+      "advantageIndex": 9.4,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "宫本武藏",
+      "totalMatches": 106,
+      "advantageIndex": 8.32,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "刘邦",
+      "totalMatches": 333,
+      "advantageIndex": 4.14,
+      "thresholdSource": "counterThreshold"
+    }
+  ],
+  "counteredBy": [
+    {
+      "heroName": "裴擒虎",
+      "totalMatches": 264,
+      "advantageIndex": -9.35,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "马超",
+      "totalMatches": 230,
+      "advantageIndex": -8.23,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "镜",
+      "totalMatches": 162,
+      "advantageIndex": -7.67,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "诸葛亮",
+      "totalMatches": 204,
+      "advantageIndex": -7.39,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "少司缘",
+      "totalMatches": 352,
+      "advantageIndex": -6.27,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "甄姬",
+      "totalMatches": 208,
+      "advantageIndex": -6.17,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "戈娅",
+      "totalMatches": 370,
+      "advantageIndex": -5.72,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "哪吒",
+      "totalMatches": 324,
+      "advantageIndex": -4.83,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "铠",
+      "totalMatches": 237,
+      "advantageIndex": -4.83,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "女娲",
+      "totalMatches": 264,
+      "advantageIndex": -4.72,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "狂铁",
+      "totalMatches": 225,
+      "advantageIndex": -4.61,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "曹操",
+      "totalMatches": 211,
+      "advantageIndex": -4.43,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "张飞",
+      "totalMatches": 350,
+      "advantageIndex": -3.26,
+      "thresholdSource": "counterThreshold"
+    },
+    {
+      "heroName": "元流之子(射手)",
+      "totalMatches": 528,
+      "advantageIndex": -2.4,
+      "thresholdSource": "counterThreshold"
+    }
+  ],
+  "goodSynergies": [
+    {
+      "heroName": "苍",
+      "totalMatches": 89,
+      "synergyIndex": 11.15
+    },
+    {
+      "heroName": "大乔",
+      "totalMatches": 231,
+      "synergyIndex": 4.66
+    }
+  ],
+  "badSynergies": [
+    {
+      "heroName": "孙尚香",
+      "totalMatches": 95,
+      "synergyIndex": -11.36
+    },
+    {
+      "heroName": "孙悟空",
+      "totalMatches": 131,
+      "synergyIndex": -8.15
+    },
+    {
+      "heroName": "沈梦溪",
+      "totalMatches": 369,
+      "synergyIndex": -7.86
+    },
+    {
+      "heroName": "敖隐",
+      "totalMatches": 156,
+      "synergyIndex": -7.55
+    },
+    {
+      "heroName": "嫦娥",
+      "totalMatches": 276,
+      "synergyIndex": -6.98
+    },
+    {
+      "heroName": "甄姬",
+      "totalMatches": 154,
+      "synergyIndex": -6.37
+    },
+    {
+      "heroName": "女娲",
+      "totalMatches": 268,
+      "synergyIndex": -6.33
+    },
+    {
+      "heroName": "虞姬",
+      "totalMatches": 194,
+      "synergyIndex": -6.21
+    },
+    {
+      "heroName": "元流之子(辅助)",
+      "totalMatches": 207,
+      "synergyIndex": -5
+    },
+    {
+      "heroName": "张飞",
+      "totalMatches": 250,
+      "synergyIndex": -3.59
+    },
+    {
+      "heroName": "戈娅",
+      "totalMatches": 355,
+      "synergyIndex": -3.34
+    },
+    {
+      "heroName": "刘邦",
+      "totalMatches": 257,
+      "synergyIndex": -3.3
+    }
+  ],
+  "serverCached": "引用麻烦注明出处233"
+}

@@ -2,7 +2,6 @@
 
 基于英雄胜率 + 协同/克制指数，做 BP（Ban/Pick）阶段的胜率预测与选人推荐。
 
-主分支 `main` 只保留**前后端**（`backend/` + `frontend/`）。训练与数据相关代码放在 `develop` 分支（`training/`、`win_rate/`），不污染主分支。
 
 ---
 
@@ -29,17 +28,6 @@ wzry/
 └── .gitignore
 ```
 
-### requirements.txt
-
-后端运行只需 3 个第三方依赖（其余用 Python 标准库）：
-
-```python
-requests>=2.28   # 爬取英雄胜率与组合优势
-numpy>=1.24      # 胜率模型数值计算
-pypinyin>=0.50   # 生成英雄拼音映射（前端拼音检索）
-```
-
----
 
 ## 快速启动
 
@@ -107,10 +95,3 @@ win_rate = 1 / (1 + e^{−score})
 爬取产物（`backend/data/`）已在 `.gitignore` 中忽略，不入库。
 
 ---
-
-## 分支约定
-
-- **`main`**：前后端（`backend/`、`frontend/`、启动脚本、文档）
-- **`develop`**：训练与数据采集（`training/`、`win_rate/`）
-
-`.gitignore` 已忽略 `training/`、`win_rate/`、`backend/data/`，确保主分支干净。

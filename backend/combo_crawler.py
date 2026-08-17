@@ -26,7 +26,7 @@ import requests
 
 from config import (BASE_URL, HEADERS, HERO_ANALYSIS_API, DATA_DIR,
                     COMBO_FILE, COMBO_MAX_AGE_DAYS, REGISTRY_FILE,
-                    WINRATE_GAME_MODE)
+                    WINRATE_GAME_MODES)
 
 
 def combo_path():
@@ -82,7 +82,7 @@ def load_hero_registry():
     for back in range(1, 8):  # 从昨天(1)开始，回退到 7 天前
         ds = (today - datetime.timedelta(days=back)).isoformat()
         try:
-            url = f"{BASE_URL}/api/herostats?date={ds}&gameMode={WINRATE_GAME_MODE}"
+            url = f"{BASE_URL}/api/herostats?date={ds}&gameMode={WINRATE_GAME_MODES[0]}"
             r = session.get(url, timeout=25)
             r.raise_for_status()
             data = r.json()
@@ -125,7 +125,13 @@ def load_hero_registry():
 
 
 def fetch_one(session, hero_id):
-    """抓取单个英雄的分析，返回 {synergy: {...}, counter: {...}}。"""
+    """抓取单个英雄的分析，返回 {synergy: {...}, counter: {...}}。
+
+    每个关系元素形如 {"idx": 指数, "m": totalMatches}：
+      synergy: {对手: {"idx": synergyIndex, "m": totalMatches}}
+      counter: {对手: {"idx": advantageIndex, "m": totalMatches}}
+    totalMatches 供模型做频次过滤（如 min_m=50，低频关系视为不存在）。
+    """
     url = f"{BASE_URL}{HERO_ANALYSIS_API}?heroId={hero_id}"
     r = session.get(url, timeout=20)
     r.raise_for_status()
@@ -133,11 +139,17 @@ def fetch_one(session, hero_id):
 
     synergy = {}
     for it in d.get("goodSynergies", []) + d.get("badSynergies", []):
-        synergy[it["heroName"]] = it.get("synergyIndex", 0.0)
+        synergy[it["heroName"]] = {
+            "idx": it.get("synergyIndex", 0.0),
+            "m": it.get("totalMatches", 0),
+        }
 
     counter = {}
     for it in d.get("counters", []) + d.get("counteredBy", []):
-        counter[it["heroName"]] = it.get("advantageIndex", 0.0)
+        counter[it["heroName"]] = {
+            "idx": it.get("advantageIndex", 0.0),
+            "m": it.get("totalMatches", 0),
+        }
 
     return {"synergy": synergy, "counter": counter}
 

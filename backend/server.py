@@ -16,7 +16,9 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
-from main import load_winrate, load_combo, load_roles
+from main import load_combo, load_roles
+from config import DEFAULT_WINRATE_MODE
+from winrate_crawler import load as load_winrate, winrate_for_mode
 from model import WinRateModel
 from engine import BPEngine
 
@@ -37,15 +39,28 @@ def _load_pinyin():
         return {}
 
 
-# 全局构建一次模型（数据缓存命中，加载很快）
+# 全局加载数据（多分段胜率 + 组合 + 名册），按请求分段构建模型
 print("📦 加载模型数据 ...")
-_WR = load_winrate()
+_MODES_MAP = load_winrate()          # {hero: {m1,m3,m4,m6}}
 _COMBO = load_combo()
 _ROLES = load_roles()
 _PINYIN = _load_pinyin()
-_MODEL = WinRateModel(_WR, _COMBO)
-_ENGINE = BPEngine(_MODEL, _ROLES)
-print(f"✅ 模型就绪，共 {len(_ROLES)} 个英雄")
+print(f"✅ 数据就绪，共 {len(_ROLES)} 个英雄")
+
+
+def _engine_for_mode(mode):
+    """按胜率分段构建模型与引擎。
+
+    mode: 'dianfeng'=巅峰千强；'dazhong'=大众分段（csv 按克制数在 大众↔巅峰 间插值）。
+    """
+    mode = mode or DEFAULT_WINRATE_MODE
+    df = winrate_for_mode(_MODES_MAP, "dianfeng")
+    if mode == "dazhong":
+        pk = winrate_for_mode(_MODES_MAP, "dazhong")
+        model = WinRateModel(df, pk, _COMBO, mode="dazhong")
+    else:
+        model = WinRateModel(df, {}, _COMBO, mode="dianfeng")
+    return BPEngine(model, _ROLES)
 
 
 def build_hero_list():
@@ -64,22 +79,26 @@ def handle_predict(body):
     opp = body.get("opp") or []
     ban = body.get("ban") or []
     role = body.get("role")  # None 或分路名
-    top_k = int(body.get("top_k", 5))
+    top_k = int(body.get("top_k", 8))
+    mode = body.get("mode") or DEFAULT_WINRATE_MODE  # dianfeng / dazhong
 
-    # 我方已占用位置：前端传 my_slots=[{role, hero}, ...]，取已选英雄的分路
+    engine = _engine_for_mode(mode)
+
+    # 我方已占用位置：前端从 my_slots[] 取已选英雄的分路
     used_roles = set()
     for slot in (body.get("my_slots") or []):
         if slot.get("hero") and slot.get("role"):
             used_roles.add(slot["role"])
 
-    base = _ENGINE.base_win_rate(my, opp)
-    single = _ENGINE.single_pick_by_role(my, opp, ban, role=role, top_k=top_k)
-    double = _ENGINE.suggest_double_pick(my, opp, ban, top_k=20, used_roles=used_roles)
+    base = engine.base_win_rate(my, opp)
+    single = engine.single_pick_by_role(my, opp, ban, role=role, top_k=top_k)
+    double = engine.suggest_double_pick(my, opp, ban, top_k=20, used_roles=used_roles)
     return {
         "base_win_rate": round(float(base), 4),
         "single_pick": single,
         "double_pick": double,
         "used_roles": sorted(used_roles),
+        "mode": mode,
     }
 
 

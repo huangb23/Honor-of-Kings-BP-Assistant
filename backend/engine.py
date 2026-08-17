@@ -36,7 +36,7 @@ class BPEngine:
     def base_win_rate(self, my_team, opp_team):
         return self.model.win_rate(my_team, opp_team)
 
-    def single_pick_by_role(self, my_team, opp_team, ban=None, role=None, top_k=5):
+    def single_pick_by_role(self, my_team, opp_team, ban=None, role=None, top_k=8):
         """每个分路推荐 top_k 个单英雄（加入后胜率最高）。"""
         cands = self.candidates(my_team, opp_team, ban)
         # 逐英雄计算加入后胜率

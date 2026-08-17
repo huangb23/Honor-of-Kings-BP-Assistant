@@ -13,9 +13,9 @@ wzry/
 │   ├── main.py         # 命令行入口
 │   ├── server.py       # BP 预测 HTTP 服务（零依赖，标准库 http.server）
 │   ├── winrate_crawler.py   # 英雄胜率爬虫（巅峰千强近 5 日）
-│   ├── combo_crawler.py     # 组合优势爬虫（协同/克制指数，≥5 天过期重爬）
+│   ├── combo_crawler.py     # 组合优势爬虫（协同/克制指数+totalMatches，≥5 天过期重爬）
 │   ├── gen_pinyin.py        # 生成英雄拼音映射（前端拼音检索用）
-│   ├── model.py        # 三特征胜率模型
+│   ├── model.py        # 英雄视角 18 权重胜率模型
 │   ├── engine.py       # BP 推荐引擎
 │   ├── config.py       # 全局配置
 │   └── README.md       # 后端详细说明
@@ -63,23 +63,30 @@ pip install -r requirements.txt
 - 每个位置支持**拼音检索**（全拼 / 首字母 / 拼音子串）+ 回车确认 + 退格清除
 - 禁用（Ban）区支持**下拉多选**，回车后焦点停留可连续输入多个 ban
 - 已选 / 已 ban 的英雄自动从下拉候选排除
-- 点击"预测"展示：当前阵容胜率、各分路单英雄 Top5、双人组合 Top20
+- **清除按钮**：一键清空 11 个输入框（我方 5 + 敌方 5 + ban）
+- **分段选择**：巅峰千强 / 大众分段（大众 = 按克制数在 大众聚合胜率 与 巅峰千强 之间插值）
+- 点击"预测"展示：当前阵容胜率、各分路单英雄 Top8、双人组合 Top20
 
 ---
 
 ## 胜率模型（详见 backend/README.md 与 develop 分支的 training/SUMMARY.md）
 
-```
-csv_diff = mean(我方英雄csv胜率) − mean(敌方英雄csv胜率)      # 胜率不 ÷100
-syn_diff = mean(我方队内协同)   − mean(敌方队内协同)
-cnt_diff = mean(我方克制敌方)   − mean(敌方克制我方)
+英雄视角 18 权重模型：每个英雄按「对手中克制它的英雄数」落在 6 个克制组，
+用该组权重 `(csv/syn/cnt)` 乘它的三项评分，阵营得分 = 5 英雄评分之和 / 5，双方相减得 logit。
 
-score = −0.2410·csv_diff + 0.2229·syn_diff + 0.3324·cnt_diff
+```
+每个英雄（按对手克制数 k=0..5 选权重组）：
+  hero_score = w_csv[k]·csv_i + w_syn[k]·syn_i + w_cnt[k]·cnt_i
+    csv_i = 该英雄站点 csv 胜率（百分数）
+    syn_i = (对队友有效协同指数之和) / 有效协同条数      # 低频关系(totalMatches<50)视为不存在
+    cnt_i = (对对手有效克制指数之和) / 有效克制条数
+
+score = (Σ 我方 hero_score)/5 − (Σ 敌方 hero_score)/5
 win_rate = 1 / (1 + e^{−score})
 ```
 
 - 无独热、无截距、无需归一化
-- 特征来自站点 `tianyuanzhiyi.com`：巅峰千强近 5 日胜率、英雄协同 / 克制指数
+- 特征来自站点 `tianyuanzhiyi.com`：巅峰千强近 5 日胜率、英雄协同 / 克制指数（含 totalMatches）
 
 ---
 
@@ -87,7 +94,7 @@ win_rate = 1 / (1 + e^{−score})
 
 | 数据 | 来源 | 更新策略 |
 |------|------|---------|
-| 英雄胜率 | `herostats?date=昨日&gameMode=6`（巅峰千强近 5 日）| 每天自动刷新（非今日则重拉）|
+| 英雄胜率 | `herostats?date=昨日&gameMode={1,3,4,6}`（全分段/1350/顶端/巅峰千强）| 每天自动刷新（非今日则重拉）|
 | 组合优势 | `hero/analysis?heroId=`（协同 / 克制）| 距上次 ≥ 5 天则重爬 |
 | 英雄名册 | 站点 herostats 全量 | 组合过期重爬时自动更新，含新英雄 |
 | 英雄拼音 | 本地 pypinyin 生成 | 手动执行 `gen_pinyin.py` 重新生成 |

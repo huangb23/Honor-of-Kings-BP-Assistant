@@ -17,8 +17,8 @@ import json
 import argparse
 import datetime
 
-from config import DATA_DIR
-from winrate_crawler import load as load_winrate
+from config import DATA_DIR, DEFAULT_WINRATE_MODE
+from winrate_crawler import load as load_winrate, winrate_for_mode
 from combo_crawler import load_combo
 from model import WinRateModel
 from engine import BPEngine
@@ -41,6 +41,9 @@ def main():
     parser.add_argument("--opp", default="", help="敌方已选英雄，逗号分隔")
     parser.add_argument("--ban", default="", help="已ban英雄，逗号分隔")
     parser.add_argument("--role", default=None, help="指定分路(对抗路/中路/发育路/打野/游走)，默认全部分路")
+    parser.add_argument("--mode", default=DEFAULT_WINRATE_MODE,
+                        choices=["dianfeng", "dazhong"],
+                        help="胜率分段：dianfeng=巅峰千强，dazhong=大众分段(全分段/1350/顶端/巅峰千强加权)")
     parser.add_argument("--force", action="store_true", help="强制重新爬取组合优势")
     args = parser.parse_args()
 
@@ -50,17 +53,24 @@ def main():
 
     # 1. 数据就绪
     print("📦 加载/更新数据 ...")
-    winrate = load_winrate()            # {hero: winRate}
+    modes_map = load_winrate()                       # {hero: {m1,m3,m4,m6}}
     combo = load_combo()                # {hero: {synergy, counter}}
 
-    # 2. 构建模型与引擎
+    # 2. 构建模型与引擎（按分段：巅峰直接用 m6；大众按克制数在 大众↔巅峰 间插值）
+    df = winrate_for_mode(modes_map, "dianfeng")
+    if args.mode == "dazhong":
+        pk = winrate_for_mode(modes_map, "dazhong")
+        model = WinRateModel(df, pk, combo, mode="dazhong")
+    else:
+        model = WinRateModel(df, {}, combo, mode="dianfeng")
     roles = load_roles()
-    model = WinRateModel(winrate, combo)
     engine = BPEngine(model, roles)
 
     # 3. 基础胜率
     base = engine.base_win_rate(my_team, opp_team)
-    print(f"\n🎮 我方已选: {my_team or '(空)'}")
+    mode_label = "巅峰千强" if args.mode == "dianfeng" else "大众分段"
+    print(f"\n📊 胜率分段: {mode_label}（{args.mode}）")
+    print(f"🎮 我方已选: {my_team or '(空)'}")
     print(f"🔴 敌方已选: {opp_team or '(空)'}")
     print(f"🚫 已ban   : {bans or '(无)'}")
     if len(my_team) < 5 or len(opp_team) < 5:

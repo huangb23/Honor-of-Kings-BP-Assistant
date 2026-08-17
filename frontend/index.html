@@ -84,6 +84,16 @@
     <div class="ban-list" id="banList"></div>
   </div>
 
+  <div class="control-bar" style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
+    <label style="font-size:13px; color:#bbb;">分段：
+      <select id="modeSelect" style="min-width:120px;">
+        <option value="dianfeng">巅峰千强</option>
+        <option value="dazhong" selected>大众分段</option>
+      </select>
+    </label>
+    <button class="add-btn" id="clearBtn" style="margin-left:auto;">🗑 清除全部</button>
+  </div>
+
   <div class="teams">
     <div class="team my">
       <h3>🔵 我方阵容</h3>
@@ -266,6 +276,20 @@ function initBanCombobox(){
   });
 }
 
+// ---- 清除全部（11 个输入框：我方5 + 敌方5 + ban）----
+$('clearBtn').addEventListener('click', () => {
+  for (let i = 0; i < 5; i++) {
+    MY[i].hero = ''; MY[i].role = ROLES[i];
+    OPP[i].hero = ''; OPP[i].role = ROLES[i];
+  }
+  BANS.length = 0;
+  $('result').style.display = 'none';
+  renderSlots('my');
+  renderSlots('opp');
+  renderBans();
+  status('🗑 已清空');
+});
+
 // ---- 预测 ----
 $('predictBtn').addEventListener('click', doPredict);
 async function doPredict(){
@@ -274,7 +298,8 @@ async function doPredict(){
     my: MY.map(o=>o.hero).filter(Boolean),
     my_slots: MY.map(o=>({role:o.role, hero:o.hero})),
     opp: OPP.map(o=>o.hero).filter(Boolean),
-    ban: BANS, top_k: 5,
+    ban: BANS, top_k: 8,
+    mode: $('modeSelect').value,
   };
   try {
     const res = await fetch('/api/predict', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
@@ -286,7 +311,9 @@ async function doPredict(){
 function showResult(d){
   $('result').style.display='block';
   $('baseWin').textContent=(d.base_win_rate*100).toFixed(1)+'%';
-  let html='<tr><th>位置</th>'+Array.from({length:5},(_,i)=>`<th>Top${i+1}</th>`).join('')+'</tr>';
+  const firstRole = Object.values(d.single_pick)[0] || [];
+  const nCols = firstRole.length;
+  let html='<tr><th>位置</th>'+Array.from({length:nCols},(_,i)=>`<th>Top${i+1}</th>`).join('')+'</tr>';
   for(const [role, items] of Object.entries(d.single_pick)){
     html+='<tr><td>'+role+'</td>'+items.map((it,i)=>`<td ${i===0?'class="top1"':''}>${it[0]} (${(it[1]*100).toFixed(1)}%)</td>`).join('')+'</tr>';
   }

@@ -4,6 +4,7 @@ BP 预测 API 服务（零依赖，用标准库 http.server）。
 
 接口：
   GET  /heroes           返回全部英雄及分路（供前端下拉框）
+  GET  /api/leaderboard  ?mode=dianfeng|dazhong&top=10  胜率榜 + 日环比变动榜
   POST /predict          body: {"my": [...], "opp": [...], "ban": [...], "role": null}
                          返回: {base_win_rate, single_pick:{role:[...]}, double_pick:[...]}
 
@@ -14,11 +15,11 @@ import os
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 from main import load_combo, load_roles
 from config import DEFAULT_WINRATE_MODE
-from winrate_crawler import load as load_winrate, winrate_for_mode
+from winrate_crawler import load_with_prev, load_dates, winrate_for_mode
 from model import WinRateModel
 from engine import BPEngine
 
@@ -39,13 +40,13 @@ def _load_pinyin():
         return {}
 
 
-# 全局加载数据（多分段胜率 + 组合 + 名册），按请求分段构建模型
+# 全局加载数据（多分段胜率 + 前一天胜率 + 组合 + 名册），按请求分段构建模型
 print("📦 加载模型数据 ...")
-_MODES_MAP = load_winrate()          # {hero: {m1,m3,m4,m6}}
+_MODES_MAP, _MODES_PREV, _DATES = load_with_prev()   # 当日/前一日 {hero: {m1,m3,m4,m6}}
 _COMBO = load_combo()
 _ROLES = load_roles()
 _PINYIN = _load_pinyin()
-print(f"✅ 数据就绪，共 {len(_ROLES)} 个英雄")
+print(f"✅ 数据就绪，共 {len(_ROLES)} 个英雄，数据日期 {_DATES}")
 
 
 def _engine_for_mode(mode):
@@ -93,12 +94,54 @@ def handle_predict(body):
     base = engine.base_win_rate(my, opp)
     single = engine.single_pick_by_role(my, opp, ban, role=role, top_k=top_k)
     double = engine.suggest_double_pick(my, opp, ban, top_k=20, used_roles=used_roles)
+
+    # 附上英雄自身胜率（按请求分段），供前端展示与着色
+    own = winrate_for_mode(_MODES_MAP, mode)
+    single = {r: [(h, w, own.get(h)) for h, w in items] for r, items in single.items()}
+    double = [(pair, wr, (own.get(pair[0]), own.get(pair[1]))) for pair, wr in double]
+
     return {
         "base_win_rate": round(float(base), 4),
         "single_pick": single,
         "double_pick": double,
         "used_roles": sorted(used_roles),
         "mode": mode,
+    }
+
+
+def build_leaderboard(mode=None, top=10):
+    """胜率排行榜 + 日环比变动榜（按请求分段）。
+
+    返回: {mode, date, prev_date, winrate:[{name,wr,delta}], rise:[...], fall:[...]}
+    无前一天数据时 delta 为 null，rise/fall 为空列表。
+    """
+    mode = mode or DEFAULT_WINRATE_MODE
+    try:
+        top = max(1, min(int(top), 50))
+    except (TypeError, ValueError):
+        top = 10
+
+    cur = winrate_for_mode(_MODES_MAP, mode)     # {hero: winRate}
+    prev = winrate_for_mode(_MODES_PREV, mode) if _MODES_PREV else {}
+
+    rows = []
+    for h, wr in cur.items():
+        d = round(wr - prev[h], 2) if h in prev else None
+        rows.append({"name": h, "wr": round(wr, 2), "delta": d})
+
+    by_wr = sorted(rows, key=lambda x: -x["wr"])[:top]
+    with_delta = [r for r in rows if r["delta"] is not None]
+    rise = sorted(with_delta, key=lambda x: -x["delta"])[:top]
+    fall = sorted(with_delta, key=lambda x: x["delta"])[:top]
+
+    dates = _DATES or load_dates()
+    return {
+        "mode": mode,
+        "date": dates[0] if dates else None,
+        "prev_date": dates[1] if len(dates) > 1 else None,
+        "winrate": by_wr,
+        "rise": rise,
+        "fall": fall,
     }
 
 
@@ -120,9 +163,16 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
         if path == "/api/heroes":
             self._send(200, {"heroes": build_hero_list()})
+            return
+        if path == "/api/leaderboard":
+            qs = parse_qs(parsed.query)
+            mode = (qs.get("mode") or [None])[0]
+            top = (qs.get("top") or [10])[0]
+            self._send(200, build_leaderboard(mode=mode, top=top))
             return
         # 静态文件
         if path == "/" or path == "":

@@ -65,6 +65,37 @@
                  cursor: pointer; }
   .btn-predict:hover { background: #3b7de8; }
   .status { text-align: center; color: #aaa; margin-top: 8px; font-size: 13px; }
+
+  /* 胜率颜色：按胜率值着色（蓝→绿→黄→红，越高越鲜艳） */
+  .wr-num { font-weight: 600; }
+
+  /* 胜率-颜色图例条 */
+  .wr-legend { display: inline-block; vertical-align: middle; }
+  .lg-bar { width: 170px; height: 8px; border-radius: 4px; border: 1px solid #3a3f4b; }
+  .lg-ticks { display: flex; justify-content: space-between; width: 172px;
+              font-size: 10px; color: #8a8a8a; margin-top: 2px; }
+  .lg-cap { font-size: 10px; color: #8a8a8a; margin-top: 1px; }
+  .rec-title.with-legend { display: flex; align-items: center;
+                           justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+
+  /* 排行榜区块 */
+  .board { margin-top: 20px; background: #1b1e24; border-radius: 10px; padding: 16px 18px; }
+  .board-title { font-size: 15px; color: #9ecbff; margin-bottom: 12px;
+                 display: flex; align-items: center; justify-content: space-between;
+                 flex-wrap: wrap; gap: 6px; }
+  .board-date { color: #8a8a8a; font-size: 12px; margin-left: 8px; font-weight: normal; }
+  .board-cols { display: flex; gap: 20px; }
+  .board-col { flex: 1; min-width: 0; }
+  .board-sub { font-size: 13px; color: #c3cad6; margin-bottom: 6px; }
+  .board-two { display: flex; gap: 12px; }
+  .board-two > div { flex: 1; min-width: 0; }
+  .board-two .board-sub { font-size: 12px; }
+  .lb-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .lb-table th, .lb-table td { border: 1px solid #333842; padding: 4px 8px; text-align: left; }
+  .lb-table th { background: #262a33; color: #9aa3b2; font-weight: normal; }
+  .lb-table .rank { color: #8a8a8a; width: 34px; }
+  .board-hint { color: #888; font-size: 12px; margin: 4px 0; }
+  @media (max-width: 900px) { .board-cols { flex-direction: column; } }
 </style>
 </head>
 <body>
@@ -110,10 +141,34 @@
 
   <div class="result" id="result" style="display:none;">
     <div class="win">当前阵容我方胜率：<b id="baseWin">--</b></div>
-    <div class="rec-title">📋 单英雄推荐（加入后胜率 Top5，按位置）</div>
+    <div class="rec-title with-legend"><span>📋 单英雄推荐（加入后胜率 Top5，按位置）</span><span class="wr-legend-slot"></span></div>
     <table class="rec-table" id="singleTable"></table>
     <div class="rec-title">🎯 双英雄组合推荐（前20）</div>
     <div class="dbl" id="doubleBox"></div>
+  </div>
+
+  <div class="board" id="board">
+    <div class="board-title"><span>📊 英雄胜率排行榜<span class="board-date" id="boardDate"></span></span><span class="wr-legend-slot"></span></div>
+    <div class="board-cols">
+      <div class="board-col">
+        <div class="board-sub">🏆 胜率榜 Top10</div>
+        <table class="lb-table" id="wrBoard"></table>
+      </div>
+      <div class="board-col">
+        <div class="board-sub">📈 相比前一天变动榜 Top10</div>
+        <div class="board-two">
+          <div>
+            <div class="board-sub">⬆ 上涨</div>
+            <table class="lb-table" id="riseBoard"></table>
+          </div>
+          <div>
+            <div class="board-sub">⬇ 下跌</div>
+            <table class="lb-table" id="fallBoard"></table>
+          </div>
+        </div>
+        <div class="board-hint" id="boardHint" style="display:none;"></div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -130,6 +185,38 @@ const OPP = Array.from({length:5}, (_, i) => ({role: ROLES[i], hero: ''}));
 const BANS = [];
 
 function status(t){ $('status').textContent = t; }
+
+// ---- 胜率颜色：胜率越高文字越鲜艳（灰 → 蓝 → 绿 → 黄 → 红，区间 47~53）----
+const WR_STOPS = [[47,'#6e7681'],[48.5,'#4da3ff'],[50,'#3dd68c'],[51.5,'#ffd93d'],[53,'#ff3b30']];
+function lerpColor(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = sh => Math.round(((pa>>sh)&255) + t * (((pb>>sh)&255) - ((pa>>sh)&255)));
+  return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
+}
+function wrColor(wr) {
+  if (wr == null || isNaN(wr)) return '#e6e6e6';
+  const w = Math.max(WR_STOPS[0][0], Math.min(WR_STOPS[WR_STOPS.length-1][0], wr));
+  for (let i = 1; i < WR_STOPS.length; i++) {
+    if (w <= WR_STOPS[i][0]) {
+      const t = (w - WR_STOPS[i-1][0]) / (WR_STOPS[i][0] - WR_STOPS[i-1][0]);
+      return lerpColor(WR_STOPS[i-1][1], WR_STOPS[i][1], t);
+    }
+  }
+  return WR_STOPS[WR_STOPS.length-1][1];
+}
+const wrHtml = wr => `<span class="wr-num" style="color:${wrColor(wr)}">${wr.toFixed(1)}%</span>`;
+
+// 胜率-颜色图例条（注入到推荐区与排行榜区旁）
+const LEGEND_HTML = (() => {
+  const n = WR_STOPS.length - 1;
+  const grad = WR_STOPS.map(([v,c],i)=>`${c} ${(i/n*100).toFixed(1)}%`).join(', ');
+  const ticks = WR_STOPS.map(([v])=>`<span>${v}</span>`).join('');
+  return `<div class="wr-legend">`
+       + `<div class="lg-bar" style="background:linear-gradient(90deg,${grad})"></div>`
+       + `<div class="lg-ticks">${ticks}</div>`
+       + `<div class="lg-cap">颜色 = 胜率（%），越高越鲜艳</div></div>`;
+})();
+document.querySelectorAll('.wr-legend-slot').forEach(el => el.innerHTML = LEGEND_HTML);
 
 function takenSet() {
   const s = new Set(BANS);
@@ -315,10 +402,61 @@ function showResult(d){
   const nCols = firstRole.length;
   let html='<tr><th>位置</th>'+Array.from({length:nCols},(_,i)=>`<th>Top${i+1}</th>`).join('')+'</tr>';
   for(const [role, items] of Object.entries(d.single_pick)){
-    html+='<tr><td>'+role+'</td>'+items.map((it,i)=>`<td ${i===0?'class="top1"':''}>${it[0]} (${(it[1]*100).toFixed(1)}%)</td>`).join('')+'</tr>';
+    // it = [hero, 加入后胜率, 自身胜率]：英雄名按自身胜率着色
+    html+='<tr><td>'+role+'</td>'+items.map((it,i)=>
+      `<td ${i===0?'class="top1"':''}><span style="color:${it[2]!=null?wrColor(it[2]):'#e6e6e6'};font-weight:600">${it[0]}</span> ${wrHtml(it[1]*100)}</td>`).join('')+'</tr>';
   }
   $('singleTable').innerHTML=html;
-  $('doubleBox').innerHTML=d.double_pick.map(([p,wr],i)=>`<div class="item">组合${i+1}: <b>${p[0]} + ${p[1]}</b> 胜率 ${(wr*100).toFixed(1)}%</div>`).join('');
+  $('doubleBox').innerHTML=d.double_pick.map((it,i)=>{
+    // it = [(a,b), 组合胜率, (a自身胜率, b自身胜率)]：英雄名按自身胜率着色
+    const [p,wr,ow]=it;
+    const hero=(h,o)=>`<b style="color:${o!=null?wrColor(o):'#e6e6e6'}">${h}</b>`;
+    return `<div class="item">组合${i+1}: ${hero(p[0],ow&&ow[0])} + ${hero(p[1],ow&&ow[1])} 组合 ${wrHtml(wr*100)}</div>`;
+  }).join('');
+}
+
+// ---- 胜率排行榜 / 变动榜（随分段切换）----
+async function loadBoard(){
+  const mode = $('modeSelect').value;
+  try{
+    const res = await fetch(`/api/leaderboard?mode=${mode}&top=10`);
+    const d = await res.json();
+    if(!res.ok) throw new Error(d.error||'加载失败');
+    renderBoard(d, mode);
+  }catch(e){
+    $('wrBoard').innerHTML='';
+    $('riseBoard').innerHTML='';
+    $('fallBoard').innerHTML='';
+    $('boardHint').style.display='block';
+    $('boardHint').textContent='❌ 排行榜加载失败：'+e.message;
+  }
+}
+function renderBoard(d, mode){
+  const label = mode==='dianfeng' ? '巅峰千强' : '大众分段';
+  const dateTxt = d.date ? `（${label} · 数据日期 ${d.date}${d.prev_date?'，对比 '+d.prev_date:''}）` : `（${label}）`;
+  $('boardDate').textContent = dateTxt;
+
+  const rankColor = i => i===0?'#ffd700':i===1?'#c8d0dc':i===2?'#cd8f52':'';
+  $('wrBoard').innerHTML = '<tr><th>#</th><th>英雄</th><th>胜率</th><th>较前日</th></tr>' +
+    d.winrate.map((r,i)=>`<tr><td class="rank" style="${rankColor(i)?'color:'+rankColor(i):''}">${i+1}</td>`+
+      `<td>${r.name}</td><td>${wrHtml(r.wr)}</td>`+
+      `<td>${r.delta==null?'--':deltaHtml(r.delta)}</td></tr>`).join('');
+
+  const deltaRows = rows => rows.length
+    ? rows.map(r=>`<tr><td>${r.name}</td><td>${deltaHtml(r.delta)}</td><td>${wrHtml(r.wr)}</td></tr>`).join('')
+    : '<tr><td colspan="3" style="color:#888">暂无数据</td></tr>';
+  $('riseBoard').innerHTML = '<tr><th>英雄</th><th>变动</th><th>胜率</th></tr>' + deltaRows(d.rise);
+  $('fallBoard').innerHTML = '<tr><th>英雄</th><th>变动</th><th>胜率</th></tr>' + deltaRows(d.fall);
+
+  const noPrev = !d.rise.length && !d.fall.length;
+  $('boardHint').style.display = noPrev ? 'block' : 'none';
+  $('boardHint').textContent = noPrev ? '⚠️ 暂无前一天胜率数据，变动榜不可用。' : '';
+}
+function deltaHtml(v){
+  if (v == null) return '--';
+  if (v > 0)  return `<span style="color:#ff5e3a">▲${v.toFixed(2)}</span>`;
+  if (v < 0)  return `<span style="color:#3ad29f">▼${Math.abs(v).toFixed(2)}</span>`;
+  return `<span style="color:#8a8a8a">0.00</span>`;
 }
 
 async function init(){
@@ -332,9 +470,11 @@ async function init(){
     renderSlots('my');
     renderSlots('opp');
     renderBans();
+    loadBoard();
     status('✅ 就绪，位置已默认分路，支持拼音检索');
   }catch(e){ status('❌ 加载失败：'+e.message); }
 }
+$('modeSelect').addEventListener('change', loadBoard);
 init();
 </script>
 </body>

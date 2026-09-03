@@ -8,12 +8,13 @@
 
 大众分段聚合胜率：popular = (mode1*0.5 + mode3*1 + mode4*1 + mode6*0.5) / 3
 
-输出：backend/data/hero_winrate.json
+输出：backend/data/hero_winrate.json（含最新一天 + 前一天，用于日环比变动榜）
     {
       "fetched_at": "2026-08-16",
-      "dates": ["2026-08-15"],
+      "dates": ["2026-08-15", "2026-08-14"],
       "modes": [1, 3, 4, 6],
-      "heroes": { "廉颇": {"m1": 50.1, "m3": 48.2, "m4": 47.0, "m6": 44.95}, ... }
+      "heroes":     { "廉颇": {"m1": 50.1, "m3": 48.2, "m4": 47.0, "m6": 44.95}, ... },
+      "heroes_prev":{ "廉颇": {"m1": 50.3, "m3": 48.0, "m4": 46.8, "m6": 45.20}, ... }
     }
 
 用法：python3 -u winrate_crawler.py
@@ -42,11 +43,10 @@ def collect():
     session.headers.update(HEADERS)
 
     today = datetime.date.today()
-    # 每天只更新前一天数据，优先从昨天开始；若昨天尚未出数据则继续回退更早
-    for back in range(1, 8):
-        ds = (today - datetime.timedelta(days=back)).isoformat()
+
+    def fetch_day(ds):
+        """抓取某天全部分段胜率；任一分段为空返回 None。"""
         per_mode = {}
-        ok = True
         for mode in WINRATE_GAME_MODES:
             try:
                 day_map = fetch_mode(session, ds, mode)
@@ -55,60 +55,123 @@ def collect():
                 day_map = {}
             if not day_map:
                 print(f"⚠️ {ds} mode={mode} 返回为空")
-                ok = False
-                break
+                return None
             per_mode[mode] = day_map
-        if ok:
-            # 汇总每个英雄各分段胜率，缺失分段用 45 兜底
-            all_heroes = set()
-            for mp in per_mode.values():
-                all_heroes |= set(mp.keys())
-            heroes = {}
-            for h in all_heroes:
-                entry = {}
-                for mode in WINRATE_GAME_MODES:
-                    wr = per_mode.get(mode, {}).get(h)
-                    entry[f"m{mode}"] = round(wr if wr is not None else 45.0, 4)
-                heroes[h] = entry
-            os.makedirs(DATA_DIR, exist_ok=True)
-            path = os.path.join(DATA_DIR, WINRATE_FILE)
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump({
-                    "fetched_at": today.isoformat(),
-                    "dates": [ds],
-                    "modes": WINRATE_GAME_MODES,
-                    "heroes": heroes,
-                }, f, ensure_ascii=False, indent=2)
-            print(f"✅ 胜率已保存: {path}，共 {len(heroes)} 个英雄，来源日期 {ds}，分段 {WINRATE_GAME_MODES}")
-            return path
+        return per_mode
 
-    raise RuntimeError("近几日均未抓到英雄胜率数据。")
+    def merge(per_mode):
+        """汇总某天各分段胜率，缺失分段用 45 兜底。"""
+        all_heroes = set()
+        for mp in per_mode.values():
+            all_heroes |= set(mp.keys())
+        heroes = {}
+        for h in all_heroes:
+            entry = {}
+            for mode in WINRATE_GAME_MODES:
+                wr = per_mode.get(mode, {}).get(h)
+                entry[f"m{mode}"] = round(wr if wr is not None else 45.0, 4)
+            heroes[h] = entry
+        return heroes
 
+    # 1) 最新可用一天（优先昨天，向前回退最多 7 天）
+    latest_ds, latest = None, None
+    for back in range(1, 8):
+        ds = (today - datetime.timedelta(days=back)).isoformat()
+        per_mode = fetch_day(ds)
+        if per_mode:
+            latest_ds, latest = ds, per_mode
+            break
+    if latest is None:
+        raise RuntimeError("近几日均未抓到英雄胜率数据。")
 
-def load():
-    """读取已保存的多分段胜率，返回 {hero: {mode_key: winRate}}（mode_key 如 'm1'/'m3'/'m4'/'m6'）。
-    每天新增前一天数据 → 若文件不存在或 fetched_at 不是今天，则重新拉取。"""
+    # 2) 前一天数据（用于日环比变动榜）；抓不到不影响主数据
+    prev_ds, prev = None, None
+    base_date = datetime.date.fromisoformat(latest_ds)
+    for back in range(1, 8):
+        ds = (base_date - datetime.timedelta(days=back)).isoformat()
+        per_mode = fetch_day(ds)
+        if per_mode:
+            prev_ds, prev = ds, per_mode
+            break
+    if prev is None:
+        print("⚠️ 未能抓到前一天胜率，日环比变动不可用。")
+
+    heroes = merge(latest)
+    heroes_prev = merge(prev) if prev else {}
+
+    os.makedirs(DATA_DIR, exist_ok=True)
     path = os.path.join(DATA_DIR, WINRATE_FILE)
-    if not os.path.exists(path):
-        collect()
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    if data.get("fetched_at") != datetime.date.today().isoformat():
-        print("⚠️ 胜率数据非今日，重新拉取...")
-        collect()
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
+    out = {
+        "fetched_at": today.isoformat(),
+        "dates": [latest_ds] + ([prev_ds] if prev_ds else []),
+        "modes": WINRATE_GAME_MODES,
+        "heroes": heroes,
+    }
+    if heroes_prev:
+        out["heroes_prev"] = heroes_prev
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=2)
+    print(f"✅ 胜率已保存: {path}，共 {len(heroes)} 个英雄，最新 {latest_ds}"
+          + (f"，前一日 {prev_ds}" if prev_ds else "（无前一日数据）")
+          + f"，分段 {WINRATE_GAME_MODES}")
+    return path
 
-    heroes = data.get("heroes", {})
-    # 兼容旧结构：旧版为 {hero: {"winRate": x}}，此时视为只有 mode6
+
+def _normalize(heroes_dict):
+    """兼容旧结构，返回 {hero: {m1,m3,m4,m6}}。"""
     out = {}
-    for h, v in heroes.items():
+    for h, v in heroes_dict.items():
         if isinstance(v, dict) and any(k.startswith("m") for k in v):
             out[h] = v
         else:
             wr = v.get("winRate") if isinstance(v, dict) else v
             out[h] = {"m6": round(wr if wr is not None else 45.0, 4)}
     return out
+
+
+def _load_file():
+    """读取胜率文件；非今日或缺少前一天数据则重爬。返回 (当日, 前一日, dates)。"""
+    path = os.path.join(DATA_DIR, WINRATE_FILE)
+    if not os.path.exists(path):
+        collect()
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    stale = data.get("fetched_at") != datetime.date.today().isoformat()
+    if stale or "heroes_prev" not in data:
+        print("⚠️ 胜率数据非今日或缺少前一天数据，重新拉取...")
+        try:
+            collect()
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            print(f"⚠️ 重新拉取失败: {e}")
+            if stale:  # 本地数据也过期时才报错
+                raise
+    return (_normalize(data.get("heroes", {})),
+            _normalize(data.get("heroes_prev", {})),
+            data.get("dates", []))
+
+
+def load():
+    """读取最新一天的多分段胜率，返回 {hero: {mode_key: winRate}}（mode_key 如 'm1'/'m3'/'m4'/'m6'）。"""
+    return _load_file()[0]
+
+
+def load_with_prev():
+    """返回 (最新一天, 前一天, dates)。前一天无数据时为 {}。"""
+    return _load_file()
+
+
+def load_dates():
+    """返回数据来源日期列表（最新日在前），无文件时为 []。"""
+    path = os.path.join(DATA_DIR, WINRATE_FILE)
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f).get("dates", [])
+    except Exception:
+        return []
 
 
 def winrate_for_mode(modes_map, mode="dianfeng"):

@@ -42,8 +42,9 @@ python3 -u main.py \
     `csv = 大众聚合值 + (巅峰千强 − 大众聚合值) × k/5`；其中大众聚合值 = `(m1*0.5 + m3 + m4 + m6*0.5) / 3`。
     即：克制数 0 → 大众胜率，克制数 5 → 巅峰千强胜率，中间线性过渡。
 - 每天只更新前一天数据，优先用昨天；当天接口若已就绪则用当天。
-- **每天自动刷新**：若 `hero_winrate.json` 的 `fetched_at` 不是今天，则重新拉取；当天已爬过则复用。
-- 保存到 `data/hero_winrate.json`（含全量英雄与全部分段）。
+- **同时抓取前一天数据**（用于日环比变动榜）：最新日确定后继续向前回溯抓前一天；抓不到则只保存最新一天。
+- **每天自动刷新**：若 `hero_winrate.json` 的 `fetched_at` 不是今天、或缺少前一天数据（`heroes_prev`），则重新拉取；当天已爬过则复用。
+- 保存到 `data/hero_winrate.json`（最新一天存 `heroes`，前一天存 `heroes_prev`，日期存 `dates`）。
 
 ### 组合优势（协同/克制指数）
 来源：`https://tianyuanzhiyi.com/api/hero/analysis?heroId={id}`
@@ -58,9 +59,19 @@ python3 -u main.py \
 
 | 文件 | 内容 |
 |------|------|
-| `hero_winrate.json` | 每英雄多分段胜率（m1/m3/m4/m6）|
+| `hero_winrate.json` | 每英雄多分段胜率（m1/m3/m4/m6），含最新一天 `heroes` 与前一天 `heroes_prev` |
 | `combo_advantage.json` | 每英雄的协同/克制指数（含每条关系的 totalMatches）|
 | `hero_registry.json` | 英雄名 → id 映射（缓存）|
+
+---
+
+## HTTP 服务（server.py）
+
+| 接口 | 说明 |
+|------|------|
+| `GET /api/heroes` | 全部英雄与分路（供前端选人）|
+| `GET /api/leaderboard?mode={dianfeng\|dazhong}&top=10` | 胜率榜 TopN + 日环比变动榜（上涨/下跌 TopN），按分段切换 |
+| `POST /api/predict` | BP 预测；`single_pick` 每项为 `(hero, 加入后胜率, 自身胜率)`，`double_pick` 每项为 `((a,b), 组合胜率, (a自身, b自身))`，自身胜率按请求分段返回 |
 
 ---
 
@@ -102,7 +113,8 @@ win_rate = 1 / (1 + e^{−score})
 | 文件 | 作用 |
 |------|------|
 | `main.py` | 命令行入口 |
-| `winrate_crawler.py` | 胜率爬虫 |
+| `server.py` | BP 预测 HTTP 服务（含 /api/leaderboard 排行榜接口）|
+| `winrate_crawler.py` | 胜率爬虫（最新一天 + 前一天）|
 | `combo_crawler.py` | 组合优势爬虫（含过期检查，保存 totalMatches）|
 | `model.py` | 英雄视角 18 权重模型（score / win_rate）|
 | `engine.py` | BP 推荐引擎（单英雄 Top8 / 双英雄组合）|

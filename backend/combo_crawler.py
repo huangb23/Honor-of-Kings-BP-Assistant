@@ -2,16 +2,19 @@
 """
 组合优势爬虫：抓取每个英雄的协同/克制指数（/api/hero/analysis?heroId={id}）。
 
-规则：
+规则（每日更新）：
   - 汇总成一份 backend/data/combo_advantage.json 保存。
-  - 若 combo_advantage.json 存在且其抓取时间距现在 < COMBO_MAX_AGE_DAYS 天，则直接复用，不重新爬。
-  - 否则按英雄名册里的全部英雄重新抓取。
+  - combo_advantage.json 非今日抓取则自动重新爬取（与胜率爬虫的每日刷新对齐）。
+  - 站点数据每天更新（totalMatches/指数随对局增长），过期数据会低估关系强度。
+  - 抓取失败的英雄从旧数据回填；仅当全部英雄抓取成功才把 fetched_at 记为今天，
+    否则沿用旧日期、下次启动自动重试（当前运行使用合并后的最优数据）。
 
 输出结构：
     {
-      "fetched_at": "2026-08-16",
+      "fetched_at": "2026-09-04",
       "combo": {
-        "廉颇": { "synergy": { "队友A": 8.09, ... }, "counter": { "英雄X": 15.9, ... } },
+        "廉颇": { "synergy": { "队友A": {"idx": 8.09, "m": 1024}, ... },
+                  "counter": { "英雄X": {"idx": 15.9, "m": 512}, ... } },
         ...
       }
     }
@@ -53,7 +56,7 @@ def combo_age_days():
 
 
 def refresh_needed():
-    """超过 COMBO_MAX_AGE_DAYS 天（或不存在）则需重新爬取。"""
+    """数据非今日（或不存在）则需重新爬取（每日更新）。"""
     return combo_age_days() >= COMBO_MAX_AGE_DAYS
 
 
@@ -155,45 +158,102 @@ def fetch_one(session, hero_id):
 
 
 def collect(force=False):
-    """抓取并保存组合优势；force=True 则无视过期强制重爬。"""
+    """抓取并保存组合优势（每日更新）；force=True 则无视过期强制重爬。
+
+    - 抓取失败的英雄从旧数据回填，保证合并后数据完整；
+    - 仅当全部英雄抓取成功时才把 fetched_at 记为今天；
+      否则沿用旧日期，下次启动自动重试（当前运行仍使用合并后的最优数据）。
+    """
     if not force and not refresh_needed():
-        print(f"♻️  组合优势未过期，复用: {combo_path()}")
+        print(f"♻️  组合优势今日已更新，复用: {combo_path()}")
         return combo_path()
 
     reg = load_hero_registry()
+
+    # 旧数据（用于失败英雄回填与日期回退）
+    old_combo, old_fetched = {}, None
+    if os.path.exists(combo_path()):
+        try:
+            with open(combo_path(), encoding="utf-8") as f:
+                old = json.load(f)
+            old_combo, old_fetched = old.get("combo", {}), old.get("fetched_at")
+        except Exception:
+            old_combo, old_fetched = {}, None
+
     session = requests.Session()
     session.headers.update(HEADERS)
 
-    combo = {}
-    failed = 0
+    combo, failed, missing404 = {}, [], []
     for name, info in reg.items():
-        hero_id = info["id"]
         try:
-            combo[name] = fetch_one(session, hero_id)
+            combo[name] = fetch_one(session, info["id"])
             time.sleep(0.3)
+        except requests.HTTPError as e:
+            status = e.response.status_code if e.response is not None else None
+            if status == 404:
+                # 站点永久无此英雄分析页（如李信光/暗形态），视为正常缺失
+                missing404.append(name)
+                if old_combo.get(name):
+                    combo[name] = old_combo[name]
+            else:
+                failed.append(name)
+                print(f"⚠️ {name}({info['id']}) 抓取失败: {e}")
+                if old_combo.get(name):
+                    combo[name] = old_combo[name]
+                if len(failed) >= 20:
+                    print("⚠️ 失败过多，提前停止，其余英雄沿用旧数据。")
+                    break
         except Exception as e:
-            failed += 1
-            print(f"⚠️ {name}({hero_id}) 抓取失败: {e}")
-            if failed >= 20:
-                print("⚠️ 失败过多，提前停止。")
+            failed.append(name)
+            print(f"⚠️ {name}({info['id']}) 抓取失败: {e}")
+            if old_combo.get(name):
+                combo[name] = old_combo[name]
+            if len(failed) >= 20:
+                print("⚠️ 失败过多，提前停止，其余英雄沿用旧数据。")
                 break
+
+    # 提前停止时，其余英雄从旧数据回填
+    for name in reg:
+        if name not in combo and old_combo.get(name):
+            combo[name] = old_combo[name]
+
+    # fetched_at：无暂时性失败（404 永久缺失不计入）→ 今天（当日不再重爬）；
+    # 否则沿用旧日期，使 refresh_needed() 保持 True，下次启动自动重试
+    today = datetime.date.today().isoformat()
+    still_missing = [n for n in reg if not combo.get(n) and n not in missing404]
+    if not failed and not still_missing:
+        fetched_at = today
+    else:
+        fetched_at = old_fetched or (datetime.date.today()
+                                     - datetime.timedelta(days=COMBO_MAX_AGE_DAYS)).isoformat()
 
     os.makedirs(DATA_DIR, exist_ok=True)
     path = combo_path()
     with open(path, "w", encoding="utf-8") as f:
         json.dump({
-            "fetched_at": datetime.date.today().isoformat(),
+            "fetched_at": fetched_at,
             "combo": combo,
         }, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ 组合优势已保存: {path}，共 {len(combo)} 个英雄，失败 {failed}")
+    print(f"✅ 组合优势已保存: {path}，共 {len(combo)} 个英雄，失败 {len(failed)}，"
+          f"站点无分析页 {len(missing404)}"
+          + ("（已回填旧数据，下次启动重试）" if failed or still_missing else ""))
     return path
 
 
 def load_combo():
-    """读取组合优势；过期则重新爬取。返回 {hero: {synergy, counter}}。"""
+    """读取组合优势；数据非今日则自动重爬（每日更新）。
+
+    重爬失败时回退本地缓存（保证服务可用），下次启动自动重试。
+    返回 {hero: {synergy, counter}}。
+    """
     if refresh_needed():
-        collect()
+        try:
+            collect()
+        except Exception as e:
+            if not os.path.exists(combo_path()):
+                raise
+            print(f"⚠️ 组合优势每日更新失败，本次使用本地缓存: {e}")
     with open(combo_path(), encoding="utf-8") as f:
         data = json.load(f)
     return data["combo"]

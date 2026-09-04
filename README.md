@@ -13,9 +13,9 @@ wzry/
 │   ├── main.py         # 命令行入口
 │   ├── server.py       # BP 预测 HTTP 服务（零依赖，标准库 http.server）
 │   ├── winrate_crawler.py   # 英雄胜率爬虫（巅峰千强近 5 日）
-│   ├── combo_crawler.py     # 组合优势爬虫（协同/克制指数+totalMatches，≥5 天过期重爬）
+│   ├── combo_crawler.py     # 组合优势爬虫（协同/克制指数+totalMatches，每日更新）
 │   ├── gen_pinyin.py        # 生成英雄拼音映射（前端拼音检索用）
-│   ├── model.py        # 英雄视角 18 权重胜率模型
+│   ├── model.py        # 英雄视角 I5 交互模型（z=3.0 截断 + 5 全局系数）
 │   ├── engine.py       # BP 推荐引擎
 │   ├── config.py       # 全局配置
 │   └── README.md       # 后端详细说明
@@ -73,21 +73,22 @@ pip install -r requirements.txt
 
 ## 胜率模型（详见 backend/README.md 与 develop 分支的 training/SUMMARY.md）
 
-英雄视角 18 权重模型：每个英雄按「对手中克制它的英雄数」落在 6 个克制组，
-用该组权重 `(csv/syn/cnt)` 乘它的三项评分，阵营得分 = 5 英雄评分之和 / 5，双方相减得 logit。
+英雄视角 I5 交互模型：每个英雄的三项评分与「有效克制关系数 k」以交互项进入打分，
+替代旧版「按 k 分组换权重」——权重曲线连续、无组间跳变。
 
 ```
-每个英雄（按对手克制数 k=0..5 选权重组）：
-  hero_score = w_csv[k]·csv_i + w_syn[k]·syn_i + w_cnt[k]·cnt_i
+每个英雄（k = 对 5 个对手的有效克制关系数，0..5）：
+  hero_score = α·csv_i + β·(k·csv_i) + w_syn·syn_i + γ0·cnt_i + γ1·(k·cnt_i)
     csv_i = 该英雄站点 csv 胜率（百分数）
-    syn_i = (对队友有效协同指数之和) / 有效协同条数      # 低频关系(totalMatches<50)视为不存在
-    cnt_i = (对对手有效克制指数之和) / 有效克制条数
+    syn_i = (对队友有效协同截断值之和) / 有效协同条数   # 低频关系(totalMatches<50)视为不存在
+    cnt_i = (对对手有效克制截断值之和) / 有效克制条数
 
 score = (Σ 我方 hero_score)/5 − (Σ 敌方 hero_score)/5
 win_rate = 1 / (1 + e^{−score})
 ```
 
 - 无独热、无截距、无需归一化
+- 关系值先经 z=3.0 置信截断（抑制低场次大指数噪声）；系数与推导见 backend/README.md 与 develop 的 training/SUMMARY.md 附录
 - 特征来自站点 `tianyuanzhiyi.com`：巅峰千强近 5 日胜率、英雄协同 / 克制指数（含 totalMatches）
 
 ---
@@ -97,7 +98,7 @@ win_rate = 1 / (1 + e^{−score})
 | 数据 | 来源 | 更新策略 |
 |------|------|---------|
 | 英雄胜率 | `herostats?date=昨日&gameMode={1,3,4,6}`（全分段/1350/顶端/巅峰千强）| 每天自动刷新（非今日则重拉）|
-| 组合优势 | `hero/analysis?heroId=`（协同 / 克制）| 距上次 ≥ 5 天则重爬 |
+| 组合优势 | `hero/analysis?heroId=`（协同 / 克制）| 每天自动刷新（失败回填旧数据并重试）|
 | 英雄名册 | 站点 herostats 全量 | 组合过期重爬时自动更新，含新英雄 |
 | 英雄拼音 | 本地 pypinyin 生成 | 手动执行 `gen_pinyin.py` 重新生成 |
 

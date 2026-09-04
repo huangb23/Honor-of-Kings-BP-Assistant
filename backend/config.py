@@ -29,7 +29,7 @@ HERO_ANALYSIS_API = "/api/hero/analysis"   # ?heroId={id}
 HERO_REGISTRY_API = "/api/hero/list"       # 若无英雄名册本地文件则用
 HEROES_DIR = "heroes"                      # 存 {id}.json
 COMBO_FILE = "combo_advantage.json"        # 汇总一份组合优势
-COMBO_MAX_AGE_DAYS = 5                     # 超过 5 天则重新爬取
+COMBO_MAX_AGE_DAYS = 1                     # 每日更新：数据非今日则重新爬取
 
 # 模型：英雄视角 18 权重（6 克制组 × csv/syn/cnt）。
 # 权重实际定义在 model.W_CNT（按「对手克制数 0..5」分组），此处仅作说明保留。

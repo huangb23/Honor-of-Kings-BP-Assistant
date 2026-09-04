@@ -100,7 +100,7 @@ win_rate = 1 / (1 + e^{−score})
 | 英雄胜率 | `herostats?date=昨日&gameMode={1,3,4,6}`（全分段/1350/顶端/巅峰千强）| 每天自动刷新（非今日则重拉）|
 | 组合优势 | `hero/analysis?heroId=`（协同 / 克制）| 每天自动刷新（失败回填旧数据并重试）|
 | 英雄名册 | 站点 herostats 全量 | 组合过期重爬时自动更新，含新英雄 |
-| 英雄拼音 | 本地 pypinyin 生成 | 手动执行 `gen_pinyin.py` 重新生成 |
+| 英雄拼音 | 本地 pypinyin 生成（多音字英雄经 `MANUAL_PINYIN` 人工修正）| 手动执行 `gen_pinyin.py` 重新生成 |
 
 爬取产物（`backend/data/`）已在 `.gitignore` 中忽略，不入库。
 
